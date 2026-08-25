@@ -36,14 +36,14 @@ def run_query(sql, params=()):
 # ---------------------------------------------------------------------------
 # Encabezado
 # ---------------------------------------------------------------------------
-st.title("🎓 Plataforma de Educación Virtual")
+st.title(" Plataforma de Educación Virtual")
 st.caption(
     "Taller de Bases de Datos — Contexto 13 — Perfiles de estudiantes con "
     "información flexible en JSON (intereses, cursos, competencias, "
     "actividades y preferencias de aprendizaje)."
 )
 
-with st.expander("ℹ️ Acerca de esta base de datos", expanded=False):
+with st.expander("ℹ Acerca de esta base de datos", expanded=False):
     st.markdown(
         """
 Esta aplicación usa **SQLite** con una tabla `estudiantes` que contiene una
@@ -58,12 +58,13 @@ normal.
         """
     )
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "1️⃣ Competencia Python",
-    "2️⃣ Actividades por curso",
-    "3️⃣ Nivel intermedio",
-    "4️⃣ Preferencias de aprendizaje",
-    "📋 Datos crudos (perfiles)",
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "1️ Competencia Python",
+    "2️ Actividades por curso",
+    "3️ Nivel intermedio",
+    "4️ Preferencias de aprendizaje",
+    "# Datos crudos (perfiles)",
+    "° Diagrama de clases",
 ])
 
 # ---------------------------------------------------------------------------
@@ -183,6 +184,84 @@ with tab5:
     st.divider()
     st.markdown("**Tabla completa (id, nombre, correo):**")
     st.dataframe(df_raw[["id", "nombre", "correo"]], use_container_width=True, hide_index=True)
+
+# ---------------------------------------------------------------------------
+# Diagrama de clases (notación UML) generado con Graphviz
+# ---------------------------------------------------------------------------
+with tab6:
+    st.subheader("Diagrama de clases del modelo de datos (notación UML)")
+    st.markdown(
+        "Aunque físicamente todo se almacena en una sola tabla `estudiantes`, "
+        "el contenido de la columna `perfil` (JSON) representa lógicamente "
+        "tres clases relacionadas por **composición**, con su respectiva "
+        "**multiplicidad**:"
+    )
+
+    diagrama_uml = r"""
+    digraph ClassDiagram {
+        graph [rankdir=LR, splines=ortho, bgcolor=transparent, nodesep=0.9, ranksep=1.1];
+        node [shape=none, fontname="Helvetica", fontsize=11];
+        edge [fontname="Helvetica", fontsize=10, color="#555555", fontcolor="#333333"];
+
+        Estudiante [label=<
+            <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" COLOR="#2E5AAC" BGCOLOR="#E6F1FB">
+                <TR><TD BGCOLOR="#2E5AAC"><FONT COLOR="white"><B>Estudiante</B></FONT></TD></TR>
+                <TR><TD ALIGN="LEFT">+ id : int [PK]</TD></TR>
+                <TR><TD ALIGN="LEFT">+ nombre : string</TD></TR>
+                <TR><TD ALIGN="LEFT">+ correo : string</TD></TR>
+                <TR><TD ALIGN="LEFT">+ perfil : Perfil</TD></TR>
+            </TABLE>
+        >];
+
+        Perfil [label=<
+            <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" COLOR="#0F6E56" BGCOLOR="#E1F5EE">
+                <TR><TD BGCOLOR="#0F6E56"><FONT COLOR="white"><B>Perfil</B></FONT></TD></TR>
+                <TR><TD ALIGN="LEFT">+ intereses : string[ ]</TD></TR>
+                <TR><TD ALIGN="LEFT">+ competencias : string[ ]</TD></TR>
+                <TR><TD ALIGN="LEFT">+ preferencias_aprendizaje : string[ ]</TD></TR>
+                <TR><TD ALIGN="LEFT">+ cursos_inscritos : CursoInscrito[ ]</TD></TR>
+            </TABLE>
+        >];
+
+        CursoInscrito [label=<
+            <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" COLOR="#993C1D" BGCOLOR="#FAECE7">
+                <TR><TD BGCOLOR="#993C1D"><FONT COLOR="white"><B>CursoInscrito</B></FONT></TD></TR>
+                <TR><TD ALIGN="LEFT">+ curso : string</TD></TR>
+                <TR><TD ALIGN="LEFT">+ nivel_experiencia : string</TD></TR>
+                <TR><TD ALIGN="LEFT">+ actividades_completadas : int</TD></TR>
+                <TR><TD ALIGN="LEFT">+ progreso_porcentaje : int</TD></TR>
+            </TABLE>
+        >];
+
+        Estudiante -> Perfil [dir=both, arrowtail=diamond, arrowhead=none,
+            penwidth=1.2, taillabel="1", headlabel="1", xlabel="contiene"];
+        Perfil -> CursoInscrito [dir=both, arrowtail=diamond, arrowhead=none,
+            penwidth=1.2, taillabel="1", headlabel="0..*", xlabel="cursos_inscritos"];
+    }
+    """
+
+    st.graphviz_chart(diagrama_uml, use_container_width=True)
+
+    with st.expander("Leer notación del diagrama"):
+        st.markdown(
+            """
+- **Rombo relleno (◆)**: relación de **composición** — `CursoInscrito` no existe
+  sin un `Perfil`, ni `Perfil` sin un `Estudiante`.
+- **Multiplicidad `1` — `0..*`**: un `Perfil` puede tener **cero o muchos**
+  cursos inscritos; un `Estudiante` tiene **exactamente un** `Perfil`.
+- **`[PK]`**: llave primaria de la tabla física `estudiantes`.
+- Físicamente, `Perfil` y `CursoInscrito` **no son tablas aparte**: viven
+  serializadas dentro de la columna `perfil` (JSON) de `estudiantes`, y se
+  consultan con `json_extract` / `json_each` (ver pestañas 1 a 4).
+            """
+        )
+
+    st.download_button(
+        "⬇️ Descargar definición del diagrama (.dot / Graphviz)",
+        data=diagrama_uml,
+        file_name="diagrama_clases_plataforma_educativa.dot",
+        mime="text/plain",
+    )
 
 st.divider()
 st.caption("Taller de Bases de Datos · Contexto 13: Plataforma de educación virtual · Streamlit + SQLite (JSON1)")
